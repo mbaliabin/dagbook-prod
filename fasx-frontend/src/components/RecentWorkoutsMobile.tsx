@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { Calendar, Clock, Activity, Trash2, Edit2 } from "lucide-react";
+import IntensityZonesMobile from "../components/IntensityZonesMobile";
+import ActivityTable from "../components/ActivityTable";
 import EditWorkoutModal from "./EditWorkoutModal";
 
 interface Workout {
@@ -9,6 +11,11 @@ interface Workout {
   duration: number;
   type: string;
   distance?: number | null;
+  zone1Min?: number;
+  zone2Min?: number;
+  zone3Min?: number;
+  zone4Min?: number;
+  zone5Min?: number;
 }
 
 interface Props {
@@ -40,8 +47,8 @@ function groupByDate(workouts: Workout[]) {
   }, {} as Record<string, Workout[]>);
 }
 
-export default function RecentWorkoutsMobile({
-  workouts,
+export default function ProfilePageMobile({
+  workouts = [],
   onDeleteWorkout,
   onUpdateWorkout,
 }: Props) {
@@ -76,7 +83,20 @@ export default function RecentWorkoutsMobile({
   };
 
   return (
-    <>
+    <div className="space-y-4 p-3">
+      {/* Зоны интенсивности */}
+      <IntensityZonesMobile workouts={workouts} />
+
+      {/* Статистика активности */}
+      <ActivityTable
+        workouts={workouts.map(w => ({
+          id: w.id,
+          type: w.type,
+          duration: w.duration,
+        }))}
+      />
+
+      {/* Последние тренировки */}
       <div className="bg-[#1a1a1d] p-3 rounded-xl">
         <h2 className="text-base font-semibold mb-3">Последние тренировки</h2>
         <div className="space-y-3">
@@ -126,9 +146,7 @@ export default function RecentWorkoutsMobile({
                             <Activity className="w-3 h-3" />
                             {w.type}
                           </span>
-                          {w.distance ? (
-                            <span>{w.distance} км</span>
-                          ) : null}
+                          {w.distance ? <span>{w.distance} км</span> : null}
                         </div>
                       </div>
 
@@ -174,6 +192,7 @@ export default function RecentWorkoutsMobile({
           onSave={onUpdateWorkout}
         />
       )}
-    </>
+    </div>
   );
 }
+
