@@ -165,53 +165,66 @@ export default function ProfilePageMobile() {
           <ChevronRight className="w-4 h-4" />
         </button>
         <button
-          onClick={() => setDateRange({ startDate: dayjs().startOf("isoWeek").toDate(), endDate: dayjs().endOf("isoWeek").toDate() })}
+          onClick={() =>
+            setDateRange({
+              startDate: dayjs().startOf("isoWeek").toDate(),
+              endDate: dayjs().endOf("isoWeek").toDate(),
+            })
+          }
           className="px-2 py-1 rounded bg-[#1f1f22] text-gray-300"
         >
           Текущая неделя
         </button>
-        <div className="relative w-full">
+        <div className="relative">
           <button
             onClick={() => setShowDateRangePicker(prev => !prev)}
-            className="px-3 py-1 rounded bg-[#1f1f22] text-gray-300 flex items-center gap-1 w-full"
+            className="px-3 py-1 rounded bg-[#1f1f22] text-gray-300 flex items-center gap-1"
           >
             <Calendar className="w-4 h-4" /> Произвольный период <ChevronDown className="w-4 h-4" />
           </button>
-
-          {/* Мобильный модальный DateRange */}
-          {showDateRangePicker && (
-            <div className="fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center p-4">
-              <div className="bg-[#1a1a1d] rounded-xl w-full max-w-md p-4">
-                <DateRange
-                  onChange={item =>
-                    setDateRange({ startDate: item.selection.startDate, endDate: item.selection.endDate })
-                  }
-                  showSelectionPreview
-                  moveRangeOnFirstSelection={false}
-                  months={1}
-                  ranges={[{
-                    startDate: dateRange?.startDate || new Date(),
-                    endDate: dateRange?.endDate || new Date(),
-                    key: 'selection'
-                  }]}
-                  direction="horizontal"
-                  rangeColors={['#3b82f6']}
-                  locale={ru}
-                  weekStartsOn={1}
-                />
-                <div className="flex justify-end mt-4 space-x-2">
-                  <button onClick={() => setShowDateRangePicker(false)} className="px-3 py-1 rounded border border-gray-600 hover:bg-gray-700 text-gray-300">
-                    Отмена
-                  </button>
-                  <button onClick={applyDateRange} className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white">
-                    Применить
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Модальное окно DateRange на весь экран */}
+      {showDateRangePicker && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-[#1a1a1d] rounded-xl w-full max-w-md p-4">
+            <DateRange
+              onChange={item =>
+                setDateRange({ startDate: item.selection.startDate, endDate: item.selection.endDate })
+              }
+              showSelectionPreview={true}
+              moveRangeOnFirstSelection={false}
+              months={1}
+              ranges={[
+                {
+                  startDate: dateRange?.startDate || new Date(),
+                  endDate: dateRange?.endDate || new Date(),
+                  key: "selection",
+                },
+              ]}
+              direction="horizontal"
+              rangeColors={["#3b82f6"]}
+              locale={ru}
+              weekStartsOn={1}
+            />
+            <div className="flex justify-end mt-2 space-x-2">
+              <button
+                onClick={() => setShowDateRangePicker(false)}
+                className="px-3 py-1 rounded border border-gray-600 hover:bg-gray-700 text-gray-300"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={applyDateRange}
+                className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Применить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Статистика */}
       <div className="grid grid-cols-3 gap-2">
@@ -220,6 +233,37 @@ export default function ProfilePageMobile() {
           <span className="text-sm mt-1">{totalTimeStr}</span>
           <span className="text-xs text-gray-500">Время</span>
         </div>
-        <div className="bg-[#
+        <div className="bg-[#1a1a1a] rounded-lg p-2 flex flex-col items-center">
+          <MapPin className="w-4 h-4 text-gray-400" />
+          <span className="text-sm mt-1">{totalDistance.toFixed(1)} км</span>
+          <span className="text-xs text-gray-500">Дистанция</span>
+        </div>
+        <div className="bg-[#1a1a1a] rounded-lg p-2 flex flex-col items-center">
+          <Zap className="w-4 h-4 text-gray-400" />
+          <span className="text-sm mt-1">{intensiveSessions}</span>
+          <span className="text-xs text-gray-500">Интенсивные</span>
+        </div>
+      </div>
+
+      {/* График нагрузки и зоны интенсивности */}
+      <TrainingLoadChartMobile workouts={filteredWorkouts} />
+      <IntensityZonesMobile workouts={filteredWorkouts} />
+
+      {/* Последние тренировки (мобильная версия) */}
+      <RecentWorkoutsMobile
+        workouts={filteredWorkouts}
+        onDeleteWorkout={handleDeleteWorkout}
+        onUpdateWorkout={fetchWorkouts}
+      />
+
+      {/* Модалка добавления тренировки */}
+      <AddWorkoutModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onAddWorkout={handleAddWorkout}
+      />
+    </div>
+  );
+}
 
 
