@@ -1,244 +1,115 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useMemo } from "react";
 import {
-  Timer,
-  MapPin,
-  Zap,
-  Plus,
-  LogOut,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-} from "lucide-react";
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Cell,
+} from "recharts";
 import dayjs from "dayjs";
-import isBetween from "dayjs/plugin/isBetween";
-import isoWeek from "dayjs/plugin/isoWeek";
-import { DateRange } from "react-date-range";
-import { ru } from "date-fns/locale";
-import "react-date-range/dist/styles.css";
-import "react-date-range/dist/theme/default.css";
-
-import TrainingLoadChartMobile from "../components/TrainingLoadChartMobile";
-import IntensityZonesMobile from "../components/IntensityZonesMobile";
-import RecentWorkouts from "../components/RecentWorkouts";
-import AddWorkoutModal from "../components/AddWorkoutModal";
-import { getUserProfile } from "../api/getUserProfile";
-
-dayjs.extend(isBetween);
-dayjs.extend(isoWeek);
 
 interface Workout {
-  id: string;
-  name: string;
   date: string;
-  duration: number;
-  type: string;
   distance?: number | null;
-  zone1Min?: number;
-  zone2Min?: number;
-  zone3Min?: number;
-  zone4Min?: number;
-  zone5Min?: number;
 }
 
-export default function ProfilePageMobile() {
-  const [name, setName] = useState("");
-  const [workouts, setWorkouts] = useState<Workout[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState(dayjs());
-  const [dateRange, setDateRange] = useState<{ startDate: Date; endDate: Date } | null>({
-    startDate: dayjs().startOf("isoWeek").toDate(),
-    endDate: dayjs().endOf("isoWeek").toDate(),
-  });
-  const [showDateRangePicker, setShowDateRangePicker] = useState(false);
+interface Props {
+  workouts: Workout[];
+}
 
-  const fetchWorkouts = useCallback(async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/workouts/user`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Ошибка загрузки тренировок");
-      const data: Workout[] = await res.json();
-      setWorkouts(data);
-    } catch (err) {
-      console.error(err);
-    }
-  }, []);
+const daysOfWeek = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+const barColors = ["#3b82f6","#2563eb","#1d4ed8","#1e40af","#1e3a8a","#1e40af","#2563eb"];
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const data = await getUserProfile();
-        setName(data.name || "Пользователь");
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    fetchProfile();
-    fetchWorkouts();
-  }, [fetchWorkouts]);
+const TrainingLoadChartMobile: React.FC<Props> = ({ workouts }) => {
+  const data = useMemo(() => {
+    const totals: Record<number, number> = { 0:0,1:0,2:0,3:0,4:0,5:0,6:0 };
+    workouts.forEach(w => {
+      const d = dayjs(w.date);
+      const dow = d.day();
+      totals[dow] += w.distance || 0;
+    });
+    return [1,2,3,4,5,6,0].map(i => ({
+      day: daysOfWeek[i===0?6:i-1],
+      load: Math.round(totals[i]),
+    }));
+  }, [workouts]);
 
-  const handleAddWorkout = (w: Workout) => setWorkouts(prev => [w, ...prev]);
-  const handleDeleteWorkout = (id: string) => setWorkouts(prev => prev.filter(w => w.id !== id));
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    window.location.href = "/login";
-  };
-
-  // Фильтрация по выбранному периоду
-  const filteredWorkouts = workouts.filter(w => {
-    const workoutDate = dayjs(w.date);
-    if (dateRange) {
-      const start = dayjs(dateRange.startDate).startOf("day");
-      const end = dayjs(dateRange.endDate).endOf("day");
-      return workoutDate.isBetween(start, end, null, "[]");
-    }
-    return workoutDate.isSame(selectedMonth, "month");
-  });
-
-  const totalDuration = filteredWorkouts.reduce((sum, w) => sum + w.duration, 0);
-  const totalDistance = filteredWorkouts.reduce((sum, w) => sum + (w.distance || 0), 0);
-  const hours = Math.floor(totalDuration / 60);
-  const minutes = totalDuration % 60;
-  const totalTimeStr = `${hours}:${minutes.toString().padStart(2, "0")}`;
-
-  const intensiveSessions = filteredWorkouts.filter(w => {
-    const zones = [
-      w.zone1Min || 0,
-      w.zone2Min || 0,
-      w.zone3Min || 0,
-      w.zone4Min || 0,
-      w.zone5Min || 0,
-    ];
-    const maxZone = zones.indexOf(Math.max(...zones)) + 1;
-    return [3, 4, 5].includes(maxZone);
-  }).length;
-
-  // Навигация по месяцам
-  const onPrevMonth = () => {
-    setSelectedMonth(prev => prev.subtract(1, "month"));
-    setDateRange(null);
-  };
-  const onNextMonth = () => {
-    setSelectedMonth(prev => prev.add(1, "month"));
-    setDateRange(null);
-  };
-
-  const applyDateRange = () => setShowDateRangePicker(false);
+  const [activeIndex, setActiveIndex] = React.useState<number | null>(null);
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d] text-white p-4 flex flex-col gap-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <img src="/profile.jpg" alt="Avatar" className="w-10 h-10 rounded-full" />
-          <div>
-            <h2 className="text-base font-semibold">{name || "Загрузка..."}</h2>
-            <p className="text-xs text-gray-400">
-              {!dateRange
-                ? selectedMonth.format("MMMM YYYY")
-                : `${dayjs(dateRange.startDate).format("DD MMM")} — ${dayjs(dateRange.endDate).format("DD MMM")}`}
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => setIsModalOpen(true)} className="bg-blue-600 px-3 py-1 rounded flex items-center text-sm">
-            <Plus className="w-4 h-4 mr-1" /> Добавить
-          </button>
-          <button onClick={handleLogout} className="bg-blue-600 px-3 py-1 rounded flex items-center text-sm">
-            <LogOut className="w-4 h-4 mr-1" /> Выйти
-          </button>
-        </div>
-      </div>
-
-      {/* Выбор периода */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <button onClick={onPrevMonth} className="px-2 py-1 rounded bg-[#1f1f22] text-gray-300">
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        <div
-          className="px-3 py-1 rounded bg-[#1f1f22] text-gray-300 cursor-pointer"
-          onClick={() => setDateRange(null)}
-        >
-          {selectedMonth.format("MMMM YYYY")}
-        </div>
-        <button onClick={onNextMonth} className="px-2 py-1 rounded bg-[#1f1f22] text-gray-300">
-          <ChevronRight className="w-4 h-4" />
-        </button>
-        <button
-          onClick={() => setDateRange({ startDate: dayjs().startOf("isoWeek").toDate(), endDate: dayjs().endOf("isoWeek").toDate() })}
-          className="px-2 py-1 rounded bg-[#1f1f22] text-gray-300"
-        >
-          Текущая неделя
-        </button>
-        <div className="relative">
-          <button
-            onClick={() => setShowDateRangePicker(prev => !prev)}
-            className="px-3 py-1 rounded bg-[#1f1f22] text-gray-300 flex items-center gap-1"
+    <div className="bg-gradient-to-b from-[#121214] to-[#1a1a1d] rounded-xl text-white shadow-lg px-4 pt-2 pb-3 w-full overflow-x-auto">
+      <h2 className="text-lg font-semibold mb-2 select-none" style={{ letterSpacing: "0.03em" }}>
+        Training Load
+      </h2>
+      <div style={{ height: 160, minWidth: 280 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={data}
+            margin={{ top: 20, right: 20, bottom: 35, left: 10 }}
+            onMouseLeave={() => setActiveIndex(null)}
           >
-            <Calendar className="w-4 h-4" /> Произвольный период <ChevronDown className="w-4 h-4" />
-          </button>
-          {showDateRangePicker && (
-            <div className="absolute z-50 mt-2 bg-[#1a1a1d] rounded shadow-lg p-2">
-              <DateRange
-                onChange={item =>
-                  setDateRange({ startDate: item.selection.startDate, endDate: item.selection.endDate })
-                }
-                showSelectionPreview={true}
-                moveRangeOnFirstSelection={false}
-                months={1}
-                ranges={[{
-                  startDate: dateRange?.startDate || new Date(),
-                  endDate: dateRange?.endDate || new Date(),
-                  key: 'selection'
-                }]}
-                direction="horizontal"
-                rangeColors={['#3b82f6']}
-                locale={ru}
-                weekStartsOn={1}
-              />
-              <div className="flex justify-end mt-2 space-x-2">
-                <button onClick={() => setShowDateRangePicker(false)} className="px-3 py-1 rounded border border-gray-600 hover:bg-gray-700 text-gray-300">
-                  Отмена
-                </button>
-                <button onClick={applyDateRange} className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white">
-                  Применить
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+            <CartesianGrid stroke="#2a2a2a" strokeDasharray="4 4" vertical={false} />
+            <XAxis
+              dataKey="day"
+              stroke="#999"
+              tick={{ fill: "#bbb", fontSize: 12, fontWeight: 500 }}
+              axisLine={false}
+              tickLine={false}
+              tickMargin={12}
+            />
+            <YAxis
+              stroke="#999"
+              tick={{ fill: "#bbb", fontSize: 11, fontWeight: 500 }}
+              axisLine={false}
+              tickLine={false}
+              width={28}
+            />
+            <Tooltip
+              wrapperStyle={{ outline: "none" }}
+              contentStyle={{
+                backgroundColor: "rgba(30,30,35,0.85)",
+                borderRadius: 8,
+                border: "none",
+                padding: "6px 10px",
+                color: "#e0e0e0",
+                fontSize: 13,
+                boxShadow: "0 4px 10px rgba(0,0,0,0.4)",
+              }}
+              cursor={{ fill: "rgba(59,130,246,0.15)" }}
+              formatter={(value: any) => [`${value}`, "Distance"]}
+            />
+            <Bar
+              dataKey="load"
+              radius={[6,6,0,0]}
+              barSize={24} // уменьшили колонки
+              animationDuration={800}
+              isAnimationActive={true}
+              onMouseEnter={(_, index) => setActiveIndex(index)}
+            >
+              {data.map((entry, index) => {
+                const isActive = index === activeIndex;
+                return (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={barColors[index % barColors.length]}
+                    style={{
+                      transition: "all 0.3s ease",
+                      filter: isActive ? "drop-shadow(0 0 8px #3b82f6)" : undefined,
+                      cursor: "pointer",
+                      transform: isActive ? "scale(1.08) translateY(-5px)" : "scale(1)",
+                    }}
+                  />
+                );
+              })}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </div>
-
-      {/* Статистика */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-[#1a1a1a] rounded-xl p-3 flex flex-col items-center">
-          <Timer className="w-4 h-4 text-gray-400" />
-          <span className="text-sm mt-1">{totalTimeStr}</span>
-          <span className="text-xs text-gray-500">Время</span>
-        </div>
-        <div className="bg-[#1a1a1a] rounded-xl p-3 flex flex-col items-center">
-          <MapPin className="w-4 h-4 text-gray-400" />
-          <span className="text-sm mt-1">{totalDistance.toFixed(1)} км</span>
-          <span className="text-xs text-gray-500">Дистанция</span>
-        </div>
-        <div className="bg-[#1a1a1a] rounded-xl p-3 flex flex-col items-center">
-          <Zap className="w-4 h-4 text-gray-400" />
-          <span className="text-sm mt-1">{intensiveSessions}</span>
-          <span className="text-xs text-gray-500">Интенсивные</span>
-        </div>
-      </div>
-
-      {/* График нагрузки и зоны интенсивности */}
-      <TrainingLoadChartMobile workouts={filteredWorkouts} />
-      <IntensityZonesMobile workouts={filteredWorkouts} />
-
-      {/* Последние тренировки */}
-      <RecentWorkouts workouts={filteredWorkouts} onDeleteWorkout={handleDeleteWorkout} onUpdateWorkout={fetchWorkouts} />
-
-      {/* Модалка */}
-      <AddWorkoutModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onAddWorkout={handleAddWorkout} />
     </div>
   );
-}
+};
+
+export default TrainingLoadChartMobile;
