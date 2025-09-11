@@ -38,24 +38,46 @@ export default function IntensityZonesMobile({ workouts }: Props) {
     }));
   }, [workouts]);
 
+  const formatTime = (minutes: number) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return h > 0 ? `${h}ч ${m}м` : `${m}м`;
+  };
+
   return (
     <div className="bg-[#1a1a1d] p-3 rounded-xl text-white">
       <h2 className="text-sm font-semibold mb-2">Intensity Zones</h2>
-      <div className="flex justify-between gap-1">
-        {totals.map((zone, idx) => (
-          <div key={idx} className="flex flex-col items-center flex-1">
-            <div
-              className="w-full rounded mb-1 transition-all duration-700"
-              style={{
-                height: `${Math.min(zone.time, 60)}px`,
-                backgroundColor: zone.color,
-              }}
-            />
-            <span className="text-[10px] text-gray-300">{zone.label}</span>
-            <span className="text-[8px] text-gray-400">{zone.percent}%</span>
-          </div>
-        ))}
+      <div className="flex justify-between gap-2 items-end h-20">
+        {totals.map((zone, idx) => {
+          const maxHeight = 80; // px
+          const relativeHeight = Math.min(zone.time, 60); // ограничение для анимации
+          const heightPx = totalMaxHeight(relativeHeight, totals);
+
+          return (
+            <div key={idx} className="flex flex-col items-center flex-1 text-center">
+              <div
+                title={`${zone.percent}% — ${formatTime(zone.time)}`}
+                className="w-2 md:w-3 rounded-full mb-1 transition-all duration-700"
+                style={{
+                  height: `${heightPx}px`,
+                  backgroundColor: zone.color,
+                }}
+              />
+              <span className="text-[10px] text-gray-300">{zone.label}</span>
+              <span className="text-[8px] text-gray-400">{zone.percent}%</span>
+              <span className="text-[8px] text-gray-500">{formatTime(zone.time)}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
+
+// функция для пропорциональной высоты
+function totalMaxHeight(value: number, totals: { time: number }[]) {
+  const max = Math.max(...totals.map((z) => z.time));
+  if (max === 0) return 0;
+  return (value / max) * 80; // 80px макс высота
+}
+
