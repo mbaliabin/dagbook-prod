@@ -32,13 +32,7 @@ export default function IntensityZonesMobile({ workouts }: Props) {
 
     return sums.map((min, idx) => ({
       label: `Z${idx + 1}`,
-      color: [
-        "linear-gradient(90deg, #2ecc71, #27ae60)",
-        "linear-gradient(90deg, #f1c40f, #f39c12)",
-        "linear-gradient(90deg, #e67e22, #d35400)",
-        "linear-gradient(90deg, #e74c3c, #c0392b)",
-        "linear-gradient(90deg, #c0392b, #8e2c2b)",
-      ][idx],
+      color: ["#2ecc71", "#f1c40f", "#e67e22", "#e74c3c", "#c0392b"][idx],
       time: min,
       percent: percent[idx],
     }));
@@ -57,23 +51,18 @@ export default function IntensityZonesMobile({ workouts }: Props) {
         {totals.map((zone, idx) => (
           <div key={idx} className="flex items-center gap-2">
             <span className="w-6 text-[10px] text-gray-300">{zone.label}</span>
-            <div className="flex-1 h-5 bg-[#333] rounded overflow-hidden relative">
+            <div className="flex-1 h-4 bg-[#333] rounded overflow-hidden relative">
               <div
-                className="h-full rounded flex items-center justify-end pr-1 text-[8px] text-white font-medium transition-all duration-700"
+                className="h-full rounded transition-all duration-700"
                 style={{
                   width: `${zone.percent}%`,
-                  backgroundImage: zone.color,
+                  backgroundColor: zone.color,
                 }}
               >
-                {zone.percent > 5 && (
-                  <span>{zone.percent}% ({formatTime(zone.time)})</span>
-                )}
-              </div>
-              {zone.percent <= 5 && (
                 <span className="absolute right-1 top-0 text-[8px] text-white">
                   {zone.percent}% ({formatTime(zone.time)})
                 </span>
-              )}
+              </div>
             </div>
           </div>
         ))}
@@ -81,5 +70,6 @@ export default function IntensityZonesMobile({ workouts }: Props) {
     </div>
   );
 }
+
 
 
