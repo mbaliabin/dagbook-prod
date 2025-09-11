@@ -21,7 +21,7 @@ import "react-date-range/dist/theme/default.css";
 import TrainingLoadChartMobile from "../components/TrainingLoadChartMobile";
 import IntensityZonesMobile from "../components/IntensityZonesMobile";
 import RecentWorkoutsMobile from "../components/RecentWorkoutsMobile";
-import AddWorkoutModal from "../components/AddWorkoutModal";
+import AddWorkoutModalMobile from "../components/AddWorkoutModalMobile";
 import { getUserProfile } from "../api/getUserProfile";
 
 dayjs.extend(isBetween);
@@ -257,7 +257,7 @@ export default function ProfilePageMobile() {
       />
 
       {/* Модалка добавления тренировки */}
-      <AddWorkoutModal
+      <AddWorkoutModalMobile
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onAddWorkout={handleAddWorkout}
