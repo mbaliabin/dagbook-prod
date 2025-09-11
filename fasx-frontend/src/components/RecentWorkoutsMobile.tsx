@@ -84,8 +84,6 @@ export default function ProfilePageMobile({
 
   return (
     <div className="space-y-4 p-3">
-      {/* Зоны интенсивности */}
-      <IntensityZonesMobile workouts={workouts} />
 
       {/* Статистика активности */}
       <ActivityTable
