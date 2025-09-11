@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom"
 import HomePage from "@/pages/HomePage"
 //import TrainingPage from "@/pages/TrainingPage" //
+import ProfilePageWrapper from "@/pages/ProfilePageWrapper" // <-- заменяем импорт
 import ProfilePage from "@/pages/ProfilePage"
 import CalendarPage from "@/pages/CalendarPage"
 import FasxLogin from "@/pages/FasxLogin";
