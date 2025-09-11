@@ -53,13 +53,13 @@ export default function IntensityZonesMobile({ workouts }: Props) {
             <span className="w-6 text-[10px] text-gray-300">{zone.label}</span>
             <div className="flex-1 h-4 bg-[#333] rounded overflow-hidden relative">
               <div
-                className="h-full rounded transition-all duration-700"
+                className="h-full rounded transition-all duration-700 relative flex items-center justify-end pr-1"
                 style={{
                   width: `${zone.percent}%`,
                   backgroundColor: zone.color,
                 }}
               >
-                <span className="absolute right-1 top-0 text-[8px] text-white">
+                <span className="text-[8px] font-medium text-white bg-black/40 px-1 rounded">
                   {zone.percent}% ({formatTime(zone.time)})
                 </span>
               </div>
@@ -70,6 +70,7 @@ export default function IntensityZonesMobile({ workouts }: Props) {
     </div>
   );
 }
+
 
 
 
