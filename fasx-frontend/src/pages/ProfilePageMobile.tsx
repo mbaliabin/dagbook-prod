@@ -191,13 +191,64 @@ export default function ProfilePageMobile() {
             <Calendar className="w-4 h-4" /> Период <ChevronDown className="w-4 h-4" />
           </button>
           {showDateRangePicker && (
-            <div className="absolute z-50 mt-2 bg-[#1a1a1d] rounded shadow-lg p-2">
-              <DateRange
-                onChange={item =>
-                  setDateRange({
-                    startDate: item.selection.startDate,
-                    endDate: item.selection.endDate,
-                  })
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80">
+              <div className="bg-[#1a1a1d] w-full h-full p-4 flex flex-col">
+                {/* Заголовок и кнопка закрытия */}
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Выбор периода</h3>
+                  <button
+                    onClick={() => setShowDateRangePicker(false)}
+                    className="text-gray-400 hover:text-white text-xl"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Сам календарь */}
+                <div className="flex-1 overflow-y-auto">
+                  <DateRange
+                    onChange={(item) =>
+                      setDateRange({
+                        startDate: item.selection.startDate,
+                        endDate: item.selection.endDate,
+                      })
+                    }
+                    showSelectionPreview={true}
+                    moveRangeOnFirstSelection={false}
+                    months={1}
+                    ranges={[
+                      {
+                        startDate: dateRange?.startDate || new Date(),
+                        endDate: dateRange?.endDate || new Date(),
+                        key: "selection",
+                      },
+                    ]}
+                    direction="vertical"
+                    rangeColors={["#3b82f6"]}
+                    locale={ru}
+                    weekStartsOn={1}
+                  />
+                </div>
+
+                {/* Кнопки управления */}
+                <div className="flex justify-end mt-4 gap-2">
+                  <button
+                    onClick={() => setShowDateRangePicker(false)}
+                    className="px-4 py-2 rounded border border-gray-600 hover:bg-gray-700 text-gray-300"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    onClick={applyDateRange}
+                    className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Применить
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
                 }
                 showSelectionPreview={true}
                 moveRangeOnFirstSelection={false}
