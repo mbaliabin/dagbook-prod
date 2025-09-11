@@ -89,7 +89,7 @@ export default function ProfilePageMobile({
 
       {/* Статистика активности */}
       <ActivityTable
-        workouts={workouts.map(w => ({
+        workouts={workouts.map((w) => ({
           id: w.id,
           type: w.type,
           duration: w.duration,
@@ -179,6 +179,7 @@ export default function ProfilePageMobile({
         </div>
       </div>
 
+      {/* Модалка редактирования */}
       {isModalOpen && selectedWorkoutId && (
         <EditWorkoutModal
           workoutId={selectedWorkoutId}
@@ -195,4 +196,3 @@ export default function ProfilePageMobile({
     </div>
   );
 }
-
