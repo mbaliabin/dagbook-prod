@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: fasx_postgres
+    environment:
+      POSTGRES_USER: fasx_user
+      POSTGRES_PASSWORD: '199510Ma%'
+      POSTGRES_DB: fasx
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - fasx_network
+
+  backend:
+    build:
+      context: ./fasx-backend
+      dockerfile: Dockerfile
+    container_name: fasx_backend
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    ports:
+      - "4000:4000"
+    networks:
+      - fasx_network
+
+  frontend:
+    build:
+      context: ./fasx-frontend
+      dockerfile: Dockerfile
+    container_name: fasx_frontend
+    ports:
+      - "5174:5173"
+    depends_on:
+      - backend
+    networks:
+      - fasx_network
+
+volumes:
+  postgres_data:
+
+networks:
+  fasx_network:
+    driver: bridge
+

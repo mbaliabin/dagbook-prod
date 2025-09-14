@@ -21,9 +21,10 @@ const prisma = new PrismaClient()
 const frontendUrl = 'http://87.249.50.183:5173'
 
 app.use(cors({
-  origin: frontendUrl,
+  origin: true,   // разрешаем все источники
   credentials: true,
 }))
+
 
 app.use(express.json())
 
@@ -32,6 +33,16 @@ app.use('/api/user', userRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/profile', profileRoutes)
 app.use('/api/workouts', workoutRoutes)
+
+app.get('/api/health', async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`  // проверка базы
+    res.json({ status: 'ok', database: 'connected', timestamp: new Date() })
+  } catch (err) {
+    console.error('Database connection error:', err)
+    res.status(500).json({ status: 'error', database: 'disconnected', timestamp: new Date() })
+  }
+})
 
 app.get('/', (req, res) => {
   res.send('🚀 FASX API работает!')
@@ -48,7 +59,7 @@ app.get('/api/users', async (req, res) => {
   }
 })
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Сервер запущен на http://0.0.0.0:${PORT}`)
 })
 
