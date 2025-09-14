@@ -5,8 +5,8 @@ services:
     image: postgres:15
     container_name: fasx_postgres
     environment:
-      POSTGRES_USER: fasx_user
-      POSTGRES_PASSWORD: '199510Ma%'
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: fasx
     ports:
       - "5433:5432"
