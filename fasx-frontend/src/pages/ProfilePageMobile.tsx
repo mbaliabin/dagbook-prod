@@ -13,15 +13,12 @@ import {
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
 import isoWeek from "dayjs/plugin/isoWeek";
-import { DateRange } from "react-date-range";
-import { ru } from "date-fns/locale";
-import "react-date-range/dist/styles.css";
-import "react-date-range/dist/theme/default.css";
 
 import TrainingLoadChartMobile from "../components/TrainingLoadChartMobile";
 import IntensityZonesMobile from "../components/IntensityZonesMobile";
 import RecentWorkoutsMobile from "../components/RecentWorkoutsMobile";
 import AddWorkoutModalMobile from "../components/AddWorkoutModalMobile";
+import CalendarModalMobile from "../components/CalendarModalMobile";
 import { getUserProfile } from "../api/getUserProfile";
 
 dayjs.extend(isBetween);
@@ -86,7 +83,6 @@ export default function ProfilePageMobile() {
     window.location.href = "/login";
   };
 
-  // Фильтрация по выбранному периоду
   const filteredWorkouts = workouts.filter(w => {
     const workoutDate = dayjs(w.date);
     if (dateRange) {
@@ -123,7 +119,6 @@ export default function ProfilePageMobile() {
     setSelectedMonth(prev => prev.add(1, "month"));
     setDateRange(null);
   };
-  const applyDateRange = () => setShowDateRangePicker(false);
 
   return (
     <div className="min-h-screen bg-[#0d0d0d] text-white p-4 flex flex-col gap-4">
@@ -152,18 +147,21 @@ export default function ProfilePageMobile() {
 
       {/* Выбор периода */}
       <div className="flex items-center gap-2 flex-wrap">
-        <button onClick={onPrevMonth} className="px-2 py-1 rounded bg-[#1f1f22] text-gray-300">
+        <button onClick={onPrevMonth} className="px-3 py-1 rounded bg-[#1f1f22] text-gray-300">
           <ChevronLeft className="w-4 h-4" />
         </button>
+
         <div
-          className="px-3 py-1 rounded bg-[#1f1f22] text-gray-300 cursor-pointer"
+          className="px-3 py-1 rounded bg-[#1f1f22] text-gray-300 cursor-pointer text-xs"
           onClick={() => setDateRange(null)}
         >
           {selectedMonth.format("MMMM YYYY")}
         </div>
-        <button onClick={onNextMonth} className="px-2 py-1 rounded bg-[#1f1f22] text-gray-300">
+
+        <button onClick={onNextMonth} className="px-3 py-1 rounded bg-[#1f1f22] text-gray-300">
           <ChevronRight className="w-4 h-4" />
         </button>
+
         <button
           onClick={() =>
             setDateRange({
@@ -171,75 +169,46 @@ export default function ProfilePageMobile() {
               endDate: dayjs().endOf("isoWeek").toDate(),
             })
           }
-          className="px-2 py-1 rounded bg-[#1f1f22] text-gray-300"
+          className="px-3 py-1 rounded bg-[#1f1f22] text-gray-300 text-xs"
         >
           Текущая неделя
         </button>
+
         <div className="relative">
           <button
             onClick={() => setShowDateRangePicker(prev => !prev)}
-            className="px-3 py-1 rounded bg-[#1f1f22] text-gray-300 flex items-center gap-1"
+            className="px-3 py-1 rounded bg-[#1f1f22] text-gray-300 flex items-center gap-1 text-xs"
           >
             <Calendar className="w-4 h-4" /> Произвольный период <ChevronDown className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Модальное окно DateRange на весь экран */}
-      {showDateRangePicker && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1a1a1d] rounded-xl w-full max-w-md p-4">
-            <DateRange
-              onChange={item =>
-                setDateRange({ startDate: item.selection.startDate, endDate: item.selection.endDate })
-              }
-              showSelectionPreview={true}
-              moveRangeOnFirstSelection={false}
-              months={1}
-              ranges={[
-                {
-                  startDate: dateRange?.startDate || new Date(),
-                  endDate: dateRange?.endDate || new Date(),
-                  key: "selection",
-                },
-              ]}
-              direction="horizontal"
-              rangeColors={["#3b82f6"]}
-              locale={ru}
-              weekStartsOn={1}
-            />
-            <div className="flex justify-end mt-2 space-x-2">
-              <button
-                onClick={() => setShowDateRangePicker(false)}
-                className="px-3 py-1 rounded border border-gray-600 hover:bg-gray-700 text-gray-300"
-              >
-                Отмена
-              </button>
-              <button
-                onClick={applyDateRange}
-                className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                Применить
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Модалка кастомного календаря */}
+      <CalendarModalMobile
+        isOpen={showDateRangePicker}
+        onClose={() => setShowDateRangePicker(false)}
+        onSelectRange={(range) => {
+          setDateRange(range);
+          setShowDateRangePicker(false);
+        }}
+        initialRange={dateRange || undefined}
+      />
 
       {/* Статистика */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="bg-[#1a1a1a] rounded-lg p-2 flex flex-col items-center">
-          <Timer className="w-4 h-4 text-gray-400" />
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-[#1a1a1d] p-3 rounded-xl flex flex-col items-center">
+          <Timer className="w-6 h-6 text-gray-400" />
           <span className="text-sm mt-1">{totalTimeStr}</span>
           <span className="text-xs text-gray-500">Время</span>
         </div>
-        <div className="bg-[#1a1a1a] rounded-lg p-2 flex flex-col items-center">
-          <MapPin className="w-4 h-4 text-gray-400" />
+        <div className="bg-[#1a1a1d] p-3 rounded-xl flex flex-col items-center">
+          <MapPin className="w-6 h-6 text-gray-400" />
           <span className="text-sm mt-1">{totalDistance.toFixed(1)} км</span>
           <span className="text-xs text-gray-500">Дистанция</span>
         </div>
-        <div className="bg-[#1a1a1a] rounded-lg p-2 flex flex-col items-center">
-          <Zap className="w-4 h-4 text-gray-400" />
+        <div className="bg-[#1a1a1d] p-3 rounded-xl flex flex-col items-center">
+          <Zap className="w-6 h-6 text-gray-400" />
           <span className="text-sm mt-1">{intensiveSessions}</span>
           <span className="text-xs text-gray-500">Интенсивные</span>
         </div>
@@ -249,7 +218,7 @@ export default function ProfilePageMobile() {
       <TrainingLoadChartMobile workouts={filteredWorkouts} />
       <IntensityZonesMobile workouts={filteredWorkouts} />
 
-      {/* Последние тренировки (мобильная версия) */}
+      {/* Последние тренировки */}
       <RecentWorkoutsMobile
         workouts={filteredWorkouts}
         onDeleteWorkout={handleDeleteWorkout}
@@ -265,5 +234,3 @@ export default function ProfilePageMobile() {
     </div>
   );
 }
-
-
