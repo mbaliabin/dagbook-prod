@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -25,7 +25,7 @@ const barColors = ["#3b82f6","#2563eb","#1d4ed8","#1e40af","#1e3a8a","#1e40af","
 
 const TrainingLoadChartMobile: React.FC<Props> = ({ workouts }) => {
   const data = useMemo(() => {
-    const totals: Record<number, number> = { 0:0,1:0,2:0,3:0,4:0,5:0,6:0 };
+    const totals: Record<number, number> = {0:0,1:0,2:0,3:0,4:0,5:0,6:0};
     workouts.forEach(w => {
       const d = dayjs(w.date);
       const dow = d.day();
@@ -37,10 +37,10 @@ const TrainingLoadChartMobile: React.FC<Props> = ({ workouts }) => {
     }));
   }, [workouts]);
 
-  const [activeIndex, setActiveIndex] = React.useState<number | null>(null);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   return (
-    <div className="bg-gradient-to-b from-[#121214] to-[#1a1a1d] rounded-xl text-white shadow-lg px-4 pt-2 pb-3 w-full overflow-x-auto">
+    <div className="bg-[#1a1a1d] rounded-xl text-white shadow-lg px-4 pt-2 pb-3 w-full overflow-x-auto">
       <h2 className="text-lg font-semibold mb-2 select-none" style={{ letterSpacing: "0.03em" }}>
         Training Load
       </h2>
@@ -70,21 +70,22 @@ const TrainingLoadChartMobile: React.FC<Props> = ({ workouts }) => {
             <Tooltip
               wrapperStyle={{ outline: "none" }}
               contentStyle={{
-                backgroundColor: "rgba(30,30,35,0.85)",
+                backgroundColor: "#2a2a2f",
                 borderRadius: 8,
                 border: "none",
                 padding: "6px 10px",
-                color: "#e0e0e0",
+                color: "#fff",
                 fontSize: 13,
                 boxShadow: "0 4px 10px rgba(0,0,0,0.4)",
               }}
-              cursor={{ fill: "rgba(59,130,246,0.15)" }}
-              formatter={(value: any) => [`${value}`, "Distance"]}
+              itemStyle={{ color: "#fff" }}
+              cursor={{ fill: "rgba(59,130,246,0.2)" }}
+              formatter={(value: any) => [`${value} км`, "Distance"]}
             />
             <Bar
               dataKey="load"
               radius={[6,6,0,0]}
-              barSize={24} // уменьшили колонки
+              barSize={24}
               animationDuration={800}
               isAnimationActive={true}
               onMouseEnter={(_, index) => setActiveIndex(index)}
@@ -113,3 +114,5 @@ const TrainingLoadChartMobile: React.FC<Props> = ({ workouts }) => {
 };
 
 export default TrainingLoadChartMobile;
+
+
