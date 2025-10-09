@@ -15,12 +15,15 @@ model User {
   name      String
   avatarUrl String?
   createdAt DateTime  @default(now())
+  isVerified        Boolean   @default(false)       // новое поле
+  verificationToken String?        
 
   profile   Profile?
   workouts  Workout[]
 
   followers Follow[]  @relation("following")
   following Follow[]  @relation("follower")
+  dailyInformation DailyInformation[] // <-- добавлено
 }
 
 model Workout {
@@ -77,5 +80,21 @@ enum WorkoutType {
   StrengthTraining
   Other
   Bike
+}
+
+model DailyInformation {
+  id            Int      @id @default(autoincrement())
+  userId        String
+  date          DateTime
+  main_param    String?
+  physical      Int      @default(0)
+  mental        Int      @default(0)
+  sleep_quality Int      @default(0)
+  pulse         Int?
+  sleep_duration String?
+  comment       String?
+  created_at    DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "fk_daily_user") // обратное поле не трогаем
 }
 
