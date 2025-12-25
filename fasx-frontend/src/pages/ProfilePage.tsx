@@ -1,29 +1,22 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import {
-  Timer,
-  MapPin,
-  Zap,
-  Target,
-  Plus,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  Calendar,
-  Home,
-  BarChart3,
-  ClipboardList,
-  CalendarDays
+  Timer, MapPin, Zap, Target, Plus, LogOut, ChevronLeft,
+  ChevronRight, ChevronDown, Calendar, Home, BarChart3,
+  ClipboardList, CalendarDays, Activity
 } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import dayjs from 'dayjs'
 import isBetween from 'dayjs/plugin/isBetween'
 import isoWeek from 'dayjs/plugin/isoWeek'
-import 'react-date-range/dist/styles.css'
-import 'react-date-range/dist/theme/default.css'
 import { DateRange } from 'react-date-range'
 import { ru } from 'date-fns/locale'
 
+// Стили
+import 'react-date-range/dist/styles.css'
+import 'react-date-range/dist/theme/default.css'
+import '../App.css'
+
+// Компоненты и API
 import IntensityZones from '../components/IntensityZones'
 import TrainingLoadChart from "../components/TrainingLoadChart"
 import WeeklySessions from "../components/WeeklySessions"
@@ -35,376 +28,225 @@ import TopSessions from "../components/TopSessions"
 
 dayjs.extend(isBetween)
 dayjs.extend(isoWeek)
-
-interface Workout {
-  id: string
-  name: string
-  date: string
-  duration: number
-  type: string
-  distance?: number | null
-  zone1Min?: number
-  zone2Min?: number
-  zone3Min?: number
-  zone4Min?: number
-  zone5Min?: number
-}
+dayjs.locale("ru");
 
 export default function ProfilePage() {
-  const [name, setName] = useState("")
-  const [loadingProfile, setLoadingProfile] = useState(true)
-  const [workouts, setWorkouts] = useState<Workout[]>([])
-  const [loadingWorkouts, setLoadingWorkouts] = useState(true)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedMonth, setSelectedMonth] = useState(dayjs())
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [profile, setProfile] = useState<any>(null);
+  const [workouts, setWorkouts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(dayjs());
   const [dateRange, setDateRange] = useState<{ startDate: Date; endDate: Date } | null>({
     startDate: dayjs().startOf('isoWeek').toDate(),
     endDate: dayjs().endOf('isoWeek').toDate()
-  })
-  const [showDateRangePicker, setShowDateRangePicker] = useState(false)
-  const [showBottomMenu, setShowBottomMenu] = useState(false)
-  const navigate = useNavigate()
-  const location = useLocation()
+  });
+  const [showDateRangePicker, setShowDateRangePicker] = useState(false);
 
-  const fetchWorkouts = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token')
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/workouts/user`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!res.ok) throw new Error("Ошибка загрузки тренировок")
-      const data: Workout[] = await res.json()
-      setWorkouts(data)
-    } catch (err) {
-      console.error("Ошибка:", err)
-    } finally {
-      setLoadingWorkouts(false)
-    }
-  }, [])
+      const [profileData, workoutsRes] = await Promise.all([
+        getUserProfile(),
+        fetch(`${import.meta.env.VITE_API_URL}/api/workouts/user`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        })
+      ]);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const data = await getUserProfile()
-        setName(data.name || "Пользователь")
-      } catch (err) {
-        console.error("Ошибка профиля:", err)
-      } finally {
-        setLoadingProfile(false)
+      setProfile(profileData);
+      if (workoutsRes.ok) {
+        const wData = await workoutsRes.json();
+        setWorkouts(wData);
       }
+    } catch (err) {
+      console.error("Ошибка загрузки:", err);
+    } finally {
+      setLoading(false);
     }
-    fetchProfile()
-    fetchWorkouts()
-  }, [fetchWorkouts])
+  }, []);
 
-  const handleAddWorkout = (w: Workout) => {
-    setWorkouts(prev => [w, ...prev])
-  }
-
-  const handleDeleteWorkout = (id: string) => {
-    setWorkouts(prev => prev.filter(w => w.id !== id))
-  }
-
-  const handleLogout = () => {
-    localStorage.removeItem('token')
-    navigate('/login')
-  }
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const filteredWorkouts = workouts.filter(w => {
     const workoutDate = dayjs(w.date)
     if (dateRange) {
-      const start = dayjs(dateRange.startDate).startOf('day')
-      const end = dayjs(dateRange.endDate).endOf('day')
-      return workoutDate.isBetween(start, end, null, '[]')
+      return workoutDate.isBetween(dayjs(dateRange.startDate).startOf('day'), dayjs(dateRange.endDate).endOf('day'), null, '[]')
     }
     return workoutDate.isSame(selectedMonth, 'month')
-  })
+  });
 
-  const totalDuration = filteredWorkouts.reduce((sum, w) => sum + w.duration, 0)
-  const totalDistance = filteredWorkouts.reduce((sum, w) => sum + (w.distance || 0), 0)
-  const hours = Math.floor(totalDuration / 60)
-  const minutes = totalDuration % 60
-  const totalTimeStr = `${hours}:${minutes.toString().padStart(2, '0')}`
-
-  const intensiveSessions = filteredWorkouts.filter(w => {
-    const zones = [
-      w.zone1Min || 0,
-      w.zone2Min || 0,
-      w.zone3Min || 0,
-      w.zone4Min || 0,
-      w.zone5Min || 0
-    ]
-    const maxZone = zones.indexOf(Math.max(...zones)) + 1
-    return [3, 4, 5].includes(maxZone)
-  }).length
-
-  const onPrevMonth = () => {
-    setSelectedMonth(prev => prev.subtract(1, 'month'))
-    setDateRange(null)
-  }
-
-  const onNextMonth = () => {
-    setSelectedMonth(prev => prev.add(1, 'month'))
-    setDateRange(null)
-  }
-
-  const applyDateRange = () => {
-    if (dateRange) setShowDateRangePicker(false)
-  }
+  const totalDuration = filteredWorkouts.reduce((sum, w) => sum + w.duration, 0);
+  const hours = Math.floor(totalDuration / 60);
+  const minutes = totalDuration % 60;
 
   const menuItems = [
-    { label: "Главная", icon: Home, path: "/daily" },
+    { label: "Главная", icon: Timer, path: "/daily" },
     { label: "Тренировки", icon: BarChart3, path: "/profile" },
+    { label: "Календарь", icon: CalendarDays, path: "/calendar" },
     { label: "Планирование", icon: ClipboardList, path: "/planning" },
-    { label: "Статистика", icon: CalendarDays, path: "/statistics" },
-  ]
+    { label: "Статистика", icon: Activity, path: "/statistics" },
+  ];
 
-  // Появление нижнего меню при скролле
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY
-      setShowBottomMenu(scrollY > 300) // например, после 300px
-    }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+  if (loading && !profile) return (
+    <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center text-white font-sans">
+      <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-[#0e0e10] text-white px-4 py-6">
-      <div className="max-w-7xl mx-auto space-y-6 pb-24">
-        {/* Верхнее меню */}
-        <div className="flex justify-around bg-[#1a1a1d] border-b border-gray-700 py-2 px-4 rounded-xl">
-          {menuItems.map((item) => {
-            const Icon = item.icon
-            const isActive =
-              (item.path === "/daily" && location.pathname === "/daily") ||
-              (item.path === "/profile" && location.pathname === "/profile") ||
-              (item.path !== "/daily" && item.path !== "/profile" && location.pathname === item.path)
+    <div className="min-h-screen bg-[#0f0f0f] text-gray-200 p-6 w-full font-sans selection:bg-blue-500/30">
+      <div className="max-w-[1600px] mx-auto space-y-6 px-4">
 
+        {/* HEADER С КЛИКАБЕЛЬНЫМ ПРОФИЛЕМ */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-4">
+          <div
+            className="flex items-center space-x-5 group cursor-pointer"
+            onClick={() => navigate("/account")}
+          >
+            <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center bg-[#131316] transition-transform group-hover:scale-105 border border-white/[0.05]">
+              {profile?.avatarUrl ? (
+                <img src={profile.avatarUrl} className="w-full h-full object-cover" alt="avatar" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-blue-600 font-bold text-white text-lg">
+                  {profile?.name?.charAt(0) || "U"}
+                </div>
+              )}
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-white tracking-tight leading-none mb-1 group-hover:text-blue-400 transition-colors">
+                {profile?.name || "Пользователь"}
+              </h1>
+              <div className="flex items-center gap-2 text-gray-500 group-hover:text-gray-300">
+                <Calendar size={12} />
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em]">
+                  {!dateRange ? selectedMonth.format('MMMM YYYY') : `${dayjs(dateRange.startDate).format('D MMM')} — ${dayjs(dateRange.endDate).format('D MMM YYYY')}`}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2 flex-wrap">
+            <button onClick={() => setIsModalOpen(true)} className="bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest px-5 py-2.5 rounded-xl flex items-center transition-all shadow-lg active:scale-95">
+              <Plus className="w-4 h-4 mr-2 stroke-[3px]"/> Добавить
+            </button>
+            <button onClick={() => { localStorage.removeItem("token"); navigate("/login"); }} className="bg-[#1a1a1d] border border-gray-800 hover:border-red-500/50 hover:text-red-400 text-gray-400 text-[10px] font-black uppercase tracking-widest px-5 py-2.5 rounded-xl flex items-center transition-all">
+              <LogOut className="w-4 h-4 mr-2"/> Выйти
+            </button>
+          </div>
+        </div>
+
+        {/* NAVIGATION */}
+        <div className="flex justify-around bg-[#131316] border border-white/[0.03] py-2 px-4 rounded-xl shadow-2xl">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
             return (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className={`flex flex-col items-center text-sm transition-colors ${
-                  isActive ? "text-blue-500" : "text-gray-400 hover:text-white"
-                }`}
-              >
-                <Icon className="w-6 h-6" />
-                <span>{item.label}</span>
+              <button key={item.path} onClick={() => navigate(item.path)}
+                className={`flex flex-col items-center gap-1 transition-all py-1 w-24 ${isActive ? "text-blue-500" : "text-gray-600 hover:text-gray-300"}`}>
+                <Icon className={`w-5 h-5 ${isActive ? "stroke-[2.5px]" : "stroke-[2px]"}`}/>
+                <span className={`text-[9px] font-black uppercase tracking-[0.2em]`}>{item.label}</span>
               </button>
-            )
+            );
           })}
         </div>
 
-        {/* Header + кнопки + выбор периода */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex items-center space-x-4">
-            <img
-              src="/profile.jpg"
-              alt="Avatar"
-              className="w-16 h-16 rounded-full object-cover"
-            />
-            <div>
-              <h1 className="text-2xl font-bold text-white">
-                {loadingProfile ? 'Загрузка...' : name}
-              </h1>
-              <p className="text-sm text-white">
-                {!dateRange
-                  ? selectedMonth.format('MMMM YYYY')
-                  : `${dayjs(dateRange.startDate).format('DD MMM YYYY')} — ${dayjs(dateRange.endDate).format('DD MMM YYYY')}`
-                }
-              </p>
-            </div>
+        {/* ПАНЕЛЬ УПРАВЛЕНИЯ ПЕРИОДОМ */}
+        <div className="flex flex-wrap items-center gap-3 bg-[#131316] p-2 rounded-xl border border-white/[0.03] shadow-xl">
+          <div className="flex items-center bg-black/40 rounded-lg border border-white/[0.05] p-1">
+            <button onClick={() => { setSelectedMonth(prev => prev.subtract(1, 'month')); setDateRange(null); }} className="p-1.5 hover:text-blue-500 transition-colors"><ChevronLeft size={18}/></button>
+            <span className="px-4 text-[10px] font-black uppercase tracking-[0.2em] min-w-[130px] text-center text-gray-300">{selectedMonth.format('MMM YYYY')}</span>
+            <button onClick={() => { setSelectedMonth(prev => prev.add(1, 'month')); setDateRange(null); }} className="p-1.5 hover:text-blue-500 transition-colors"><ChevronRight size={18}/></button>
           </div>
-
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Выбор периода */}
-            <div className="flex items-center space-x-2 flex-wrap">
-              <button
-                className="flex items-center text-sm text-gray-300 bg-[#1f1f22] px-3 py-1 rounded hover:bg-[#2a2a2d]"
-                onClick={onPrevMonth}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-
-              <div
-                className="relative bg-[#1f1f22] text-white px-3 py-1 rounded text-sm flex items-center gap-1 cursor-pointer select-none"
-                onClick={() => { setShowDateRangePicker(false); setDateRange(null) }}
-                title="Показать текущий месяц"
-              >
-                {selectedMonth.format('MMMM YYYY')}
-              </div>
-
-              <button
-                className="text-sm text-gray-300 bg-[#1f1f22] px-3 py-1 rounded hover:bg-[#2a2a2d]"
-                onClick={onNextMonth}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-
-              <button
-                onClick={() => {
-                  setDateRange({ startDate: dayjs().startOf('isoWeek').toDate(), endDate: dayjs().endOf('isoWeek').toDate() })
-                  setShowDateRangePicker(false)
-                }}
-                className="text-sm px-3 py-1 rounded border border-gray-600 bg-[#1f1f22] text-gray-300 hover:bg-[#2a2a2d]"
-              >
-                Текущая неделя
-              </button>
-
-              <div className="relative">
-                <button
-                  onClick={() => setShowDateRangePicker(prev => !prev)}
-                  className="ml-2 text-sm px-3 py-1 rounded border border-gray-600 bg-[#1f1f22] text-gray-300 hover:bg-[#2a2a2d] flex items-center"
-                >
-                  <Calendar className="w-4 h-4 mr-1" />
-                  Произвольный период
-                  <ChevronDown className="w-4 h-4 ml-1" />
-                </button>
-
-                {showDateRangePicker && (
-                  <div className="absolute z-50 mt-2 bg-[#1a1a1d] rounded shadow-lg p-2">
-                    <DateRange
-                      onChange={item => setDateRange({ startDate: item.selection.startDate, endDate: item.selection.endDate })}
-                      showSelectionPreview={true}
-                      moveRangeOnFirstSelection={false}
-                      months={1}
-                      ranges={[{ startDate: dateRange?.startDate || new Date(), endDate: dateRange?.endDate || new Date(), key: 'selection' }]}
-                      direction="horizontal"
-                      rangeColors={['#3b82f6']}
-                      className="text-white"
-                      locale={ru}
-                      weekStartsOn={1}
-                    />
-                    <div className="flex justify-end mt-2 space-x-2">
-                      <button
-                        onClick={() => setShowDateRangePicker(false)}
-                        className="px-3 py-1 rounded border border-gray-600 hover:bg-gray-700 text-gray-300"
-                      >
-                        Отмена
-                      </button>
-                      <button
-                        onClick={applyDateRange}
-                        className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        Применить
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Кнопки */}
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1 rounded flex items-center"
-              >
-                <Plus className="w-4 h-4 mr-1" /> Добавить тренировку
-              </button>
-              <button
-                onClick={handleLogout}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1 rounded flex items-center"
-              >
-                <LogOut className="w-4 h-4 mr-1" /> Выйти
-              </button>
-            </div>
+          <button
+            onClick={() => setDateRange({ startDate: dayjs().startOf('isoWeek').toDate(), endDate: dayjs().endOf('isoWeek').toDate() })}
+            className={`text-[9px] font-black uppercase tracking-widest px-4 py-2.5 rounded-lg border transition-all ${!dateRange ? 'border-white/[0.05] text-gray-500' : 'border-blue-500/30 bg-blue-500/10 text-blue-400'}`}
+          >
+            Неделя
+          </button>
+          <div className="relative ml-auto">
+            <button
+              onClick={() => setShowDateRangePicker(!showDateRangePicker)}
+              className={`flex items-center gap-3 text-[9px] font-black uppercase tracking-widest px-4 py-2.5 rounded-lg border transition-all ${showDateRangePicker ? 'border-blue-500 bg-blue-600 text-white' : 'border-white/[0.05] bg-[#1a1a1d] text-gray-400 hover:border-white/10'}`}
+            >
+              <CalendarDays size={14} />
+              {dateRange ? `${dayjs(dateRange.startDate).format('DD.MM')} — ${dayjs(dateRange.endDate).format('DD.MM')}` : "Период"}
+              <ChevronDown size={14} className={`transition-transform duration-300 ${showDateRangePicker ? 'rotate-180' : ''}`} />
+            </button>
+            {showDateRangePicker && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowDateRangePicker(false)} />
+                <div className="absolute z-50 mt-3 right-0 bg-[#0f0f11] border border-white/[0.08] rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] p-4 w-[330px] animate-in fade-in zoom-in duration-200">
+                  <DateRange
+                    onChange={item => setDateRange({ startDate: item.selection.startDate!, endDate: item.selection.endDate! })}
+                    ranges={[{ startDate: dateRange?.startDate || new Date(), endDate: dateRange?.endDate || new Date(), key: 'selection' }]}
+                    locale={ru}
+                    rangeColors={['#3b82f6']}
+                    showDateDisplay={false}
+                    months={1}
+                  />
+                  <button onClick={() => setShowDateRangePicker(false)} className="w-full mt-4 bg-blue-600 hover:bg-blue-500 py-3 rounded-lg font-black text-[10px] uppercase tracking-[0.2em] transition-all">
+                    Применить
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Статистика */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-[#1a1a1d] p-4 rounded-xl">
-            <p className="text-sm text-gray-400 flex items-center">
-              <Timer className="w-4 h-4 mr-1" /> Total Training
-            </p>
-            <h2 className="text-xl font-semibold">{totalTimeStr}</h2>
-            <p className="text-xs text-gray-500">{filteredWorkouts.length} Sessions</p>
-          </div>
-          <div className="bg-[#1a1a1d] p-4 rounded-xl">
-            <p className="text-sm text-gray-400 flex items-center">
-              <MapPin className="w-4 h-4 mr-1" /> Distance
-            </p>
-            <h2 className="text-xl font-semibold">{totalDistance.toFixed(1)} km</h2>
-            <p className="text-xs text-gray-500">
-              {filteredWorkouts.filter(w => w.distance).length} Sessions
-            </p>
-          </div>
-          <div className="bg-[#1a1a1d] p-4 rounded-xl">
-            <p className="text-sm text-gray-400 flex items-center">
-              <Zap className="w-4 h-4 mr-1" /> Intensive
-            </p>
-            <h2 className="text-xl font-semibold">{intensiveSessions}</h2>
-          </div>
-          <div className="bg-[#1a1a1d] p-4 rounded-xl">
-            <p className="text-sm text-gray-400 flex items-center">
-              <Target className="w-4 h-4 mr-1" /> Specific
-            </p>
-            <h2 className="text-xl font-semibold">1</h2>
-          </div>
+        {/* СТАТИСТИКА - ГРИД С ФИКСИРОВАННЫМИ КОЛОНКАМИ */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+          {[
+            { label: 'Total Duration', val: `${hours}:${minutes.toString().padStart(2, '0')}`, sub: `${filteredWorkouts.length} сессий`, icon: Timer, color: 'text-blue-500' },
+            { label: 'Distance', val: `${filteredWorkouts.reduce((sum, w) => sum + (w.distance || 0), 0).toFixed(1)} km`, sub: 'Всего за период', icon: MapPin, color: 'text-emerald-500' },
+            { label: 'Workouts', val: filteredWorkouts.length, sub: 'Активности', icon: Zap, color: 'text-amber-500' },
+            { label: 'Compliance', val: '94%', sub: 'Выполнение плана', icon: Target, color: 'text-purple-500' },
+          ].map((stat, i) => (
+            <div key={i} className="bg-[#131316] border border-white/[0.03] p-5 rounded-xl shadow-sm hover:border-white/10 transition-all">
+              <div className="flex items-center gap-2 text-gray-500 mb-3">
+                <stat.icon size={14} className={stat.color} />
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] whitespace-nowrap">{stat.label}</span>
+              </div>
+              <div className="text-2xl font-black text-white tracking-tight">{stat.val}</div>
+              <div className="text-[9px] font-bold text-gray-600 uppercase mt-1">{stat.sub}</div>
+            </div>
+          ))}
         </div>
 
-        {/* Графики и таблицы */}
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="space-y-6">
-            <TrainingLoadChart workouts={filteredWorkouts} />
+        {/* ГРАФИКИ С МИНИМАЛЬНОЙ ВЫСОТОЙ */}
+        <div className="grid lg:grid-cols-2 gap-6 w-full">
+          <div className="bg-[#131316] border border-white/[0.03] rounded-xl p-6 shadow-xl min-h-[400px] flex flex-col justify-center">
+             <TrainingLoadChart workouts={filteredWorkouts} />
+          </div>
+          <div className="bg-[#131316] border border-white/[0.03] rounded-xl p-6 shadow-xl min-h-[400px] flex flex-col justify-center">
             <IntensityZones workouts={filteredWorkouts} />
           </div>
-          <div className="space-y-6">
+        </div>
+
+        {/* ТАБЛИЦА И ТОП С МИНИМАЛЬНОЙ ВЫСОТОЙ */}
+        <div className="grid lg:grid-cols-2 gap-6 w-full">
+          <div className="bg-[#131316] border border-white/[0.03] rounded-xl p-6 shadow-xl min-h-[450px] flex flex-col">
             <TopSessions workouts={filteredWorkouts} />
+          </div>
+          <div className="bg-[#131316] border border-white/[0.03] rounded-xl p-6 shadow-xl min-h-[450px] flex flex-col">
             <ActivityTable workouts={filteredWorkouts} />
           </div>
         </div>
 
-        {/* Список тренировок */}
-        <div>
-          {loadingWorkouts ? (
-            <p className="text-gray-400">Загрузка тренировок...</p>
+        {/* ПОСЛЕДНИЕ ТРЕНИРОВКИ С ОБРАБОТКОЙ ПУСТОГО СОСТОЯНИЯ */}
+        <div className="bg-[#131316] border border-white/[0.03] rounded-xl p-6 shadow-xl mb-10 min-h-[300px] flex flex-col">
+          {filteredWorkouts.length > 0 ? (
+            <RecentWorkouts workouts={filteredWorkouts} onDeleteWorkout={() => fetchData()} onUpdateWorkout={fetchData} />
           ) : (
-            <RecentWorkouts
-              workouts={filteredWorkouts}
-              onDeleteWorkout={handleDeleteWorkout}
-              onUpdateWorkout={fetchWorkouts}
-            />
+            <div className="flex-grow flex flex-col items-center justify-center py-12 text-gray-600">
+              <BarChart3 size={40} className="mb-4 opacity-10" />
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Нет данных для отображения</p>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Модалка */}
-      <AddWorkoutModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onAddWorkout={handleAddWorkout}
-      />
-
-      {/* Нижняя навигация — появляется при скролле */}
-      <div
-        className={`fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-7xl bg-[#1a1a1d] border-t border-gray-700 flex justify-around py-2 px-4 transition-all duration-300 ${
-          showBottomMenu ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6 pointer-events-none"
-        }`}
-      >
-        {menuItems.map((item) => {
-          const Icon = item.icon
-          const isActive =
-            (item.path === "/daily" && location.pathname === "/daily") ||
-            (item.path === "/profile" && location.pathname === "/profile") ||
-            (item.path !== "/daily" && item.path !== "/profile" && location.pathname === item.path)
-
-          return (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center text-sm transition-colors ${
-                isActive ? "text-blue-500" : "text-gray-400 hover:text-white"
-              }`}
-            >
-              <Icon className="w-6 h-6" />
-              <span>{item.label}</span>
-            </button>
-          )
-        })}
-      </div>
+      <AddWorkoutModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onAddWorkout={() => fetchData()} />
     </div>
   )
 }
